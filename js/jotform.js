@@ -29,7 +29,7 @@ var JotForm = {
      * All calculations defined on the form
      * @var Object
      */
-    calculations: {},
+    calculations: [],
     /**
      * Condition Values
      * @var Object
@@ -1511,8 +1511,7 @@ var JotForm = {
         const resolveCalculationMap = () => {
             if (!calculationMap) {
                 calculationMap = new Map();
-                const calculations = Array.isArray(JotForm.calculations) ? JotForm.calculations || [] : [];
-                calculations.forEach(calculation => {
+                JotForm.calculations.forEach(calculation => {
                     const { operands, resultField } = calculation;
                     if (!operands) return;
                     const fields = operands.split(',');
@@ -4909,7 +4908,7 @@ var JotForm = {
     },
 
     setCalculations: function (calculations) {
-        if(!JotForm.calculations || Object.keys(JotForm.calculations).length === 0) {
+        if(JotForm.calculations.length === 0) {
             JotForm.calculations = calculations;
         } else {
             Object.values(calculations).forEach(function(calculation) {
@@ -4932,7 +4931,7 @@ var JotForm = {
 
         if (questions.length > 0) {
             // if no calculation is set, calculations equals to an empty object
-            if (Object.keys(JotForm.calculations).length <= 0) {
+            if (JotForm.calculations.length <= 0) {
                 JotForm.calculations = [];
             }
 
@@ -5332,9 +5331,14 @@ var JotForm = {
 
     showAndResizeESignature: function(id) {
         // resize field and reset, only when visible
-        var element = $('id_' + id);
-        if (element && JotForm.isVisible(element) && element.select('.pad').length > 0) {
-            element.select('.pad').first().fire('on:sigresize');
+        var element = document.querySelector('#id_' + id);
+        if (element && JotForm.isVisible(element) && element.querySelectorAll('.pad').length > 0) {
+          const sigresizeEvent = document.createEvent('HTMLEvents');
+          sigresizeEvent.initEvent("dataavailable", true, true);
+          sigresizeEvent.eventName = "on:sigresize";
+          sigresizeEvent.memo = sigresizeEvent.memo || { };
+
+          document.querySelector('.pad').dispatchEvent(sigresizeEvent);
         }
     },
 
@@ -7487,7 +7491,7 @@ var JotForm = {
 
 
     setCalculationResultReadOnly: function () {
-        $A(JotForm.calculations).each(function (calc, index) {
+        JotForm.calculations.forEach(function (calc, index) {
             if ((calc.readOnly && calc.readOnly != "0") && $('input_' + calc.resultField) != null) {
                 $('input_' + calc.resultField).setAttribute('readOnly', 'true');
             }
@@ -7509,7 +7513,7 @@ var JotForm = {
             });
         };
 
-        $A(JotForm.calculations).each(function (calc, index) {
+        JotForm.calculations.forEach(function (calc, index) {
             if (!calc.operands || typeof calc.operands === 'function') return;
             var ops = calc.operands.split(',');
             for (var i = 0; i < ops.length; i++) {
@@ -7627,7 +7631,8 @@ var JotForm = {
     },
 
     runAllCalculations: function (ignoreEditable, htmlOnly) {
-        $A(JotForm.calculations).each(function (calc, index) {
+
+        JotForm.calculations.forEach(function (calc, index) {
             if(htmlOnly && JotForm.getInputType(calc.resultField) !== "html") return;
             if (!(ignoreEditable && (!calc.readOnly || calc.readOnly == "0")) && !!calc.equation) {
                 JotForm.checkCalculation(calc);
@@ -7700,8 +7705,7 @@ var JotForm = {
     },
 
     runAllCalculationByID: function(field){
-        const calcs = Array.isArray(JotForm.calculations) ? JotForm.calculations : [];
-        calcs.forEach(calc => {
+        JotForm.calculations.forEach(calc => {
             if (calc && calc.resultField == field) {
                 JotForm.checkCalculation(calc);
             }
@@ -9957,14 +9961,12 @@ var JotForm = {
         var getVal = function () {
             var val = JotForm.donationSourceField.value;
 
-            if (JotForm.calculations && Array.isArray(JotForm.calculations)) {
-                var sourceField = JotForm.calculations.find(function(c){
-                    return c.resultField === JotForm.donationSourceField.id.split("_")[1];
-                });
+            var sourceField = JotForm.calculations.find(function(c){
+                return c.resultField === JotForm.donationSourceField.id.split("_")[1];
+            });
 
-                if (sourceField && sourceField.useCommasForDecimals === "1"){
-                    val = val.replace(",",".");
-                }
+            if (sourceField && sourceField.useCommasForDecimals === "1"){
+                val = val.replace(",",".");
             }
 
             if (typeof val !== 'number') {
